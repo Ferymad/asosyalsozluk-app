@@ -2,6 +2,7 @@ import streamlit as st
 import json
 from typing import List, Dict, Any
 import datetime
+from datetime import datetime
 
 def render_entry(entry: Dict[str, Any]):
     """Render a single blog entry."""
@@ -28,26 +29,45 @@ def filter_entries(entries: List[Dict[str, Any]], search_term: str, show_deleted
         filtered = [e for e in filtered if not e['silinmis']]
     return filtered
 
+def format_date(date_string: str) -> str:
+    try:
+        date = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return date.strftime("%d.%m.%Y %H:%M:%S")
+    except ValueError:
+        return date_string  # Return original string if parsing fails
+
 def display_entries(entries: List[Dict[str, Any]]):
-    """Display the filtered entries."""
+    """Display the filtered entries in a format similar to the image."""
+    st.write(f"Number of entries received for display: {len(entries)}")  # Debug statement
+
     if not entries:
         st.warning("No entries found matching the current filters.")
         return
 
-    st.write(f"Displaying {len(entries)} entries:")
-
     for entry in entries:
-        st.markdown(f"**{entry['baslik']}**")
-        st.write(f"Score: {entry['skor']}")
-        st.write(f"Date: {entry['tarih']}")
-        st.write(entry['entiri'])
-        if entry['silinmis']:
-            st.write("(Deleted)")
-        st.markdown("---")
+        col1, col2 = st.columns([1, 20])
+        
+        with col1:
+            st.write(f"↑\n[{entry['skor']}]\n↓")
+        
+        with col2:
+            st.markdown(f"### {entry['baslik']}")
+            st.write(entry['entiri'])
+            st.write(f"Date: {entry['tarih']}")
+            if entry['silinmis']:
+                st.write("(Deleted)")
+        
+        st.write("---")
 
 # Example usage
 if __name__ == "__main__":
     # This is for testing purposes
-    with open("sample_data.json", "r", encoding="utf-8") as f:
-        sample_json_data = f.read()
-    display_entries(json.loads(sample_json_data))
+    sample_entries = [
+        {
+            "skor": 2,
+            "baslik": "asosyal sözlük yardım hattı",
+            "entiri": "Some content here...",
+            "tarih": "03.10.2022 14:08:09"
+        }
+    ]
+    display_entries(sample_entries)

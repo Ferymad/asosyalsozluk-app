@@ -3,8 +3,14 @@ import json
 import os
 from services.csv_to_json import process_uploaded_file
 from components.display_component import display_entries
-from components.search_filter_component import run_search_filter_component
+from components.search_filter_component import run_search_filter_component, search_filter_sidebar
 from components.visualization_component import run_visualization_component, prepare_data
+import math
+import csv
+import pandas as pd
+from itertools import islice
+from datetime import datetime, timedelta
+import pytz
 
 # Initialize session state
 if 'json_data' not in st.session_state:
@@ -12,8 +18,8 @@ if 'json_data' not in st.session_state:
 
 @st.cache_data
 def process_data(file_path):
-    json_data = process_uploaded_file(file_path)
-    return json_data if json_data else None
+    df = pd.read_csv(file_path, encoding='utf-8')
+    return df.to_dict('records')
 
 def save_uploaded_file(uploaded_file):
     """Save the uploaded file to a temporary directory."""
@@ -36,18 +42,19 @@ def main():
     if uploaded_file is not None:
         file_path = save_uploaded_file(uploaded_file)
         if file_path:
-            json_data = process_data(file_path)
-            if json_data:
-                st.session_state.json_data = json_data
-                df = prepare_data(json_data)
-                
-                run_search_filter_component(json_data)
-                run_visualization_component(df)
-                display_entries(json_data)
-            else:
-                st.error("Dosya işlenirken bir hata oluştu.")
-        else:
-            st.error("Dosya yüklenirken bir hata oluştu.")
+            entries = process_data(file_path)
+            st.write(f"Number of entries loaded: {len(entries)}")
+            
+            # Data Analysis and Visualization Section
+            st.header("Veri Görselleştirme")
+            run_visualization_component(entries)
+            
+            # Entries Display Section
+            st.header("Girdiler")
+            run_search_filter_component(entries)
+
+    else:
+        st.warning("Please upload a CSV file to begin.")
 
 if __name__ == "__main__":
     main()

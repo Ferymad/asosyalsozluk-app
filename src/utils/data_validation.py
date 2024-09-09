@@ -13,11 +13,12 @@ def validate_csv_structure(df: pd.DataFrame) -> bool:
     """
     required_columns = ['skor', 'baslik', 'entiri', 'silinmis', 'tarih']
     
-    # Check if all required columns are present
+    if df.empty:
+        return False
+    
     if not all(col in df.columns for col in required_columns):
         return False
     
-    # Check data types
     expected_types = {
         'skor': 'int64',
         'baslik': 'object',
@@ -27,7 +28,7 @@ def validate_csv_structure(df: pd.DataFrame) -> bool:
     }
     
     for col, expected_type in expected_types.items():
-        if df[col].dtype != expected_type:
+        if col in df.columns and df[col].dtype != expected_type:
             return False
     
     return True
@@ -42,22 +43,10 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
     pd.DataFrame: The cleaned DataFrame.
     """
-    # Convert 'tarih' to datetime
     df['tarih'] = pd.to_datetime(df['tarih'], errors='coerce')
-    
-    # Remove rows with invalid dates
     df = df.dropna(subset=['tarih'])
-    
-    # Ensure 'skor' is integer
-    df['skor'] = df['skor'].astype(int)
-    
-    # Ensure 'silinmis' is boolean
-    df['silinmis'] = df['silinmis'].astype(bool)
-    
-    # Strip whitespace from string columns
-    for col in ['baslik', 'entiri']:
-        df[col] = df[col].str.strip()
-    
+    df = df.astype({'skor': 'int', 'silinmis': 'bool'})
+    df[['baslik', 'entiri']] = df[['baslik', 'entiri']].apply(lambda x: x.str.strip())
     return df
 
 def validate_and_clean_data(data: List[Dict[str, Any]]) -> pd.DataFrame:

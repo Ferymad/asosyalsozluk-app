@@ -39,7 +39,7 @@ def load_component(component_name):
 
 # Main app logic
 def main():
-    st.title("Asosyal Sözlük Veri Analizi")
+    st.title("Asosyal Sözlük CSV Analiz")
 
     # Kullanıcı Kılavuzu ve Geliştirici Bilgileri
     st.header("Kullanıcı Kılavuzu")

@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
-from typing import List, Dict, Any
 import plotly.graph_objs as go
+from typing import List, Dict, Any
 from collections import Counter
 import nltk
 from nltk.corpus import stopwords

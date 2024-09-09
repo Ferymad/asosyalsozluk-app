@@ -28,40 +28,26 @@ def filter_entries(entries: List[Dict[str, Any]], search_term: str, show_deleted
         filtered = [e for e in filtered if not e['silinmis']]
     return filtered
 
-def display_entries(json_data: str):
-    """Display blog entries with sorting, filtering, and pagination."""
-    entries = json.loads(json_data)
-    
-    st.sidebar.header("Filtrele ve Sırala")
-    
-    # Sorting options
-    sort_by = st.sidebar.selectbox("Sıralama kriteri:", ['tarih', 'skor', 'baslik'])
-    ascending = st.sidebar.checkbox("Artan sıralama", value=False)
-    
-    # Filtering options
-    search_term = st.sidebar.text_input("Arama:")
-    show_deleted = st.sidebar.checkbox("Silinmiş entry'leri göster", value=True)
-    
-    # Apply sorting and filtering
-    sorted_entries = sort_entries(entries, sort_by, ascending)
-    filtered_entries = filter_entries(sorted_entries, search_term, show_deleted)
-    
-    # Pagination
-    entries_per_page = 10
-    page_number = st.number_input("Sayfa", min_value=1, max_value=(len(filtered_entries) - 1) // entries_per_page + 1, value=1)
-    start_idx = (page_number - 1) * entries_per_page
-    end_idx = start_idx + entries_per_page
-    
-    # Display entries
-    for entry in filtered_entries[start_idx:end_idx]:
-        render_entry(entry)
-    
-    # Display pagination info
-    st.write(f"Sayfa {page_number} / {(len(filtered_entries) - 1) // entries_per_page + 1}")
+def display_entries(entries: List[Dict[str, Any]]):
+    """Display the filtered entries."""
+    if not entries:
+        st.warning("No entries found matching the current filters.")
+        return
+
+    st.write(f"Displaying {len(entries)} entries:")
+
+    for entry in entries:
+        st.markdown(f"**{entry['baslik']}**")
+        st.write(f"Score: {entry['skor']}")
+        st.write(f"Date: {entry['tarih']}")
+        st.write(entry['entiri'])
+        if entry['silinmis']:
+            st.write("(Deleted)")
+        st.markdown("---")
 
 # Example usage
 if __name__ == "__main__":
     # This is for testing purposes
     with open("sample_data.json", "r", encoding="utf-8") as f:
         sample_json_data = f.read()
-    display_entries(sample_json_data)
+    display_entries(json.loads(sample_json_data))

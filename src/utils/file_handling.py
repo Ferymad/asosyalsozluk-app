@@ -2,8 +2,9 @@ import os
 import tempfile
 from typing import Union
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
-def save_uploaded_file(uploaded_file: st.UploadedFile) -> Union[str, None]:
+def save_uploaded_file(uploaded_file: UploadedFile) -> Union[str, None]:
     """
     Save the uploaded file to a temporary directory.
     

@@ -1,22 +1,35 @@
 import streamlit as st
 import json
 from typing import List, Dict, Any
-from datetime import datetime
+from dateutil import parser
+from datetime import datetime, timezone
+
+def parse_date(date_string: str) -> datetime:
+    """Parse a date string into a datetime object."""
+    return parser.isoparse(date_string).replace(tzinfo=timezone.utc)
 
 def search_entries(entries: List[Dict[str, Any]], search_term: str) -> List[Dict[str, Any]]:
     """Perform full-text search on entries."""
     if not search_term:
         return entries
+    
+    def safe_lower(value):
+        """Safely convert a value to lowercase string."""
+        if value is None:
+            return ""
+        return str(value).lower()
+
     return [
         entry for entry in entries
-        if search_term.lower() in entry['baslik'].lower() or search_term.lower() in entry['entiri'].lower()
+        if search_term.lower() in safe_lower(entry.get('baslik', '')) or 
+           search_term.lower() in safe_lower(entry.get('entiri', ''))
     ]
 
 def filter_by_date(entries: List[Dict[str, Any]], start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
     """Filter entries by date range."""
     return [
         entry for entry in entries
-        if start_date <= datetime.strptime(entry['tarih'], "%Y-%m-%d %H:%M:%S") <= end_date
+        if start_date <= parse_date(entry['tarih']) <= end_date
     ]
 
 def filter_by_score(entries: List[Dict[str, Any]], min_score: int, max_score: int) -> List[Dict[str, Any]]:
@@ -32,52 +45,43 @@ def filter_deleted(entries: List[Dict[str, Any]], show_deleted: bool) -> List[Di
         return entries
     return [entry for entry in entries if not entry['silinmis']]
 
-def apply_search_and_filters(entries: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Apply all search and filter criteria to the entries."""
-    filtered_entries = entries
-
-    filtered_entries = search_entries(filtered_entries, filters['search_term'])
-    filtered_entries = filter_by_date(filtered_entries, filters['start_date'], filters['end_date'])
-    filtered_entries = filter_by_score(filtered_entries, filters['min_score'], filters['max_score'])
-    filtered_entries = filter_deleted(filtered_entries, filters['show_deleted'])
-
-    return filtered_entries
-
 def search_filter_sidebar(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Create sidebar UI for search and filter options."""
-    st.sidebar.header("Arama ve Filtreleme")
+    """Create a sidebar for search and filter options."""
+    st.sidebar.header("Search and Filter")
 
-    search_term = st.sidebar.text_input("Arama:")
+    search_term = st.sidebar.text_input("Search entries")
 
-    st.sidebar.subheader("Tarih Aralığı")
-    min_date = min(datetime.strptime(entry['tarih'], "%Y-%m-%d %H:%M:%S") for entry in entries)
-    max_date = max(datetime.strptime(entry['tarih'], "%Y-%m-%d %H:%M:%S") for entry in entries)
-    start_date = st.sidebar.date_input("Başlangıç Tarihi", min_date)
-    end_date = st.sidebar.date_input("Bitiş Tarihi", max_date)
+    min_date = min(parse_date(entry['tarih']) for entry in entries)
+    max_date = max(parse_date(entry['tarih']) for entry in entries)
 
-    st.sidebar.subheader("Skor Aralığı")
-    min_score = min(entry['skor'] for entry in entries)
-    max_score = max(entry['skor'] for entry in entries)
-    score_range = st.sidebar.slider("Skor Aralığı", min_score, max_score, (min_score, max_score))
+    date_range = st.sidebar.date_input(
+        "Date range",
+        value=(min_date.date(), max_date.date()),
+        min_value=min_date.date(),
+        max_value=max_date.date()
+    )
 
-    show_deleted = st.sidebar.checkbox("Silinmiş entry'leri göster", value=True)
+    show_deleted = st.sidebar.checkbox("Show deleted entries", value=True)
 
     return {
-        'search_term': search_term,
-        'start_date': datetime.combine(start_date, datetime.min.time()),
-        'end_date': datetime.combine(end_date, datetime.max.time()),
-        'min_score': score_range[0],
-        'max_score': score_range[1],
-        'show_deleted': show_deleted
+        "search_term": search_term,
+        "start_date": datetime.combine(date_range[0], datetime.min.time()).replace(tzinfo=timezone.utc),
+        "end_date": datetime.combine(date_range[1], datetime.max.time()).replace(tzinfo=timezone.utc),
+        "show_deleted": show_deleted
     }
 
-def run_search_filter_component(json_data: str) -> List[Dict[str, Any]]:
-    """Main function to run the search and filter component."""
-    entries = json.loads(json_data)
+def run_search_filter_component(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Run the search and filter component."""
+    if not isinstance(entries, list):
+        st.error("The data is not in the expected format (list of entries).")
+        return []
+
     filters = search_filter_sidebar(entries)
 
-    
-    filtered_entries = apply_search_and_filters(entries, filters)
+    filtered_entries = search_entries(entries, filters["search_term"])
+    filtered_entries = filter_by_date(filtered_entries, filters["start_date"], filters["end_date"])
+    filtered_entries = filter_deleted(filtered_entries, filters["show_deleted"])
+
     return filtered_entries
 
 # Example usage
